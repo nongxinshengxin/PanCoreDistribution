@@ -42,7 +42,7 @@ while (startNum<=sampleNum){
       result<-getnext(combination)
       aRowSum<-apply(df[result], 1, sum)
       cores<-length(grep(startNum,aRowSum,fixed = T))
-      pans<-length(aRowSum)-length(grep(0,aRowSum,fixed = T))
+      pans<-length(aRowSum)-length(grep(0,aRowSum,fixed = T))-cores
       Core<-append(Core,cores)
       Pan<-append(Pan,pans)
       Sample<-append(Sample,startNum)
@@ -54,7 +54,7 @@ while (startNum<=sampleNum){
         result<-getnext(combination)
         aRowSum<-apply(df[result], 1, sum)
         cores<-length(grep(startNum,aRowSum,fixed = T))
-        pans<-length(aRowSum)-length(grep(0,aRowSum,fixed = T))
+        pans<-length(aRowSum)-length(grep(0,aRowSum,fixed = T))-cores
         Core<-append(Core,cores)
         Pan<-append(Pan,pans)
         Sample<-append(Sample,startNum)
@@ -72,10 +72,7 @@ longdf<-pivot_longer(outdf,cols = c("Core","Pan"),names_to = "group",values_to =
 pdf("plot.pdf",width = 8,height = 5)
 ggplot(longdf,aes(x=Sample,y=value,color=group))+
   geom_point(shape=4)+
-  geom_smooth(aes(x=Sample,y=value),
-              method = "lm")+
-  geom_smooth(aes(x=Sample,y=value),
-              method = "lm")+
+  stat_smooth(method = lm, formula = y ~ log(x))+
   scale_color_manual(values=c("#D17431","#39729C"))+
   labs(x="Number of genomes",y="Number of gene families",color="")+
   theme_classic()
@@ -83,13 +80,16 @@ dev.off()
 
 coredf<-longdf%>%filter(group=="Core")
 pandf<-longdf%>%filter(group=="Pan")
-corem<-summary(lm(value~Sample,data = coredf))
-panm<-summary(lm(value~Sample,data = pandf))
 
-corem_df<-data.frame(Slope=corem$coefficients[2,1],Intercept=corem$coefficients[1,1],R=corem$adj.r.squared)
-
-panm_df<-data.frame(Slope=panm$coefficients[2,1],Intercept=panm$coefficients[1,1],R=panm$adj.r.squared)
+corem<-summary(lm(value~log(Sample),data = coredf))
+panm<-summary(lm(value~log(Sample),data = pandf))
 
 
-write.table(corem_df,"core_formula.txt",sep = "\t",quote = F,row.names = F)
-write.table(panm_df,"pan_formula.txt",sep = "\t",quote = F,row.names = F)
+sink("core_formula.txt")
+corem
+sink()
+
+sink("pan_formula.txt")
+panm
+sink()
+
